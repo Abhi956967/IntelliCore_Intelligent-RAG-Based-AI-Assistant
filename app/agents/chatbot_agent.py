@@ -10,6 +10,8 @@ load_dotenv()
 os.environ["SSL_CERT_FILE"] = certifi.where()
 os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
 
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage
 from langgraph.graph import StateGraph, START, MessagesState
@@ -21,20 +23,20 @@ Path("data").mkdir(exist_ok=True)
 
 
 # Update default and allowed models to use Gemini 2.5
-DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+DEFAULT_MODEL = os.getenv(
+    "GEMINI_MODEL",
+    "gemini-3.1-flash-lite-preview"
+)
 
 ALLOWED_MODELS = {
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
-    "gemini-2.5-flash-lite", # Included the lite version if needed
-    "gemini-1.5-flash",      # Kept for fallback compatibility 
-    "gemini-1.5-pro"
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3.1-pro-preview",
 }
 
 
 
 SYSTEM_PROMPT = """
-You are a helpful Agentic AI assistant named BappyGPT similar to ChatGPT.
+You are a helpful Agentic AI assistant named Intelligent RAG-Based AI Assistant similar to ChatGPT.
 
 You can:
 1. Answer normal questions.
@@ -85,9 +87,10 @@ def build_agent(model_name: str):
 
     # Initialize ChatGoogleGenerativeAI
     llm = ChatGoogleGenerativeAI(
-        model=selected_model,
-        temperature=0.3,
-        streaming=True
+    model=DEFAULT_MODEL,
+    google_api_key=GOOGLE_API_KEY,
+    temperature=0.7,
+    max_retries=3,
     )
 
     llm_with_tools = llm.bind_tools(tools)
