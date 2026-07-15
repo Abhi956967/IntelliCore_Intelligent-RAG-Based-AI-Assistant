@@ -18,9 +18,9 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.sqlite import SqliteSaver
 from app.tools.agent_tools import tools
 
-STORAGE_DIR = Path(os.getenv("APP_STORAGE_DIR", "."))
-DATA_DIR = STORAGE_DIR / "data"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
+from app.storage import get_data_dir
+
+DATA_DIR = get_data_dir()
 
 
 GEMINI_MODELS = {

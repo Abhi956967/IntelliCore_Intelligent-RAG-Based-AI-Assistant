@@ -20,11 +20,10 @@ from pypdf import PdfReader
 import docx2txt
 
 
-STORAGE_DIR = Path(os.getenv("APP_STORAGE_DIR", "."))
-UPLOADS_DIR = STORAGE_DIR / "uploads"
-CHROMA_DIR = STORAGE_DIR / "chroma_db"
-UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-CHROMA_DIR.mkdir(parents=True, exist_ok=True)
+from app.storage import get_chroma_dir, get_uploads_dir
+
+UPLOADS_DIR = get_uploads_dir()
+CHROMA_DIR = get_chroma_dir()
 
 
 # Embeddings model

@@ -58,12 +58,9 @@ app.add_middleware(
 
 templates = Jinja2Templates(directory="app/templates")
 
-Path("uploads").mkdir(exist_ok=True)
-Path("data").mkdir(exist_ok=True)
+from app.storage import get_uploads_dir
 
-STORAGE_DIR = Path(os.getenv("APP_STORAGE_DIR", "."))
-UPLOADS_DIR = STORAGE_DIR / "uploads"
-UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+UPLOADS_DIR = get_uploads_dir()
 
 init_db()
 

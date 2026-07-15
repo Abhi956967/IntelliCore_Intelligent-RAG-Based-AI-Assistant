@@ -1,14 +1,12 @@
 from datetime import datetime
-import os
 from pathlib import Path
 
 from sqlalchemy import Boolean, create_engine, Column, Integer, String, Text, DateTime, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-STORAGE_DIR = Path(os.getenv("APP_STORAGE_DIR", "."))
-DATA_DIR = STORAGE_DIR / "data"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
+from app.storage import get_data_dir
 
+DATA_DIR = get_data_dir()
 DATABASE_URL = f"sqlite:///{DATA_DIR / 'chatbot_memory.db'}"
 
 engine = create_engine(
