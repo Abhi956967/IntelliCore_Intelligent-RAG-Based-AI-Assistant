@@ -69,10 +69,18 @@ init_db()
 
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(15 * 1024 * 1024)))
 
-# Serve React frontend from dist folder if it exists
-frontend_dist = Path("frontend_dist")
-if frontend_dist.exists():
-    assets_dir = frontend_dist / "assets"
+def get_frontend_dist_dir() -> Path | None:
+    candidates = [Path("frontend_dist"), Path("frontend/dist")]
+    for candidate in candidates:
+        if candidate.exists() and (candidate / "index.html").exists():
+            return candidate
+    return None
+
+
+# Serve React frontend from the built dist folder if it exists
+frontend_dist_dir = get_frontend_dist_dir()
+if frontend_dist_dir is not None:
+    assets_dir = frontend_dist_dir / "assets"
     if assets_dir.exists():
         app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
@@ -117,9 +125,9 @@ async def health_check():
 @app.get("/")
 async def home(request: Request):
     """Serve React app if available, otherwise fallback to Jinja2 template"""
-    frontend_dist = Path("frontend_dist")
-    if frontend_dist.exists():
-        return FileResponse(str(frontend_dist / "index.html"))
+    frontend_dist_dir = get_frontend_dist_dir()
+    if frontend_dist_dir is not None:
+        return FileResponse(str(frontend_dist_dir / "index.html"))
     return templates.TemplateResponse(
         request=request,
         name="index.html",
