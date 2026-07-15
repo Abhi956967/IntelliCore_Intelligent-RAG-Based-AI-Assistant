@@ -5,7 +5,7 @@ services:
     plan: starter
     region: oregon
     healthCheckPath: /health
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && cd frontend && npm ci && npm run build && cd .. && rm -rf frontend_dist && mkdir -p frontend_dist && cp -r frontend/dist/. frontend_dist/
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && cd frontend && npm ci && npm run build
     startCommand: python run.py
     autoDeployTrigger: commit
     disk:
