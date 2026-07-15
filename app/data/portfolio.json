@@ -1,0 +1,100 @@
+{
+  "name": "Abhishek Maurya",
+  "location": "Delhi, New Delhi",
+  "email": "am6007965@gmail.com",
+  "phone": "+91-956-967-1914",
+  "role": "Machine Learning Engineer and Freelance AI Developer",
+  "summary": "Results-driven Machine Learning Engineer and Freelance AI Developer with business analysis experience and a record of building AI-powered products, scalable ML pipelines, GenAI applications, AI agent workflows, and FastAPI services.",
+  "focus": [
+    "Generative AI applications",
+    "RAG systems",
+    "LangGraph agent workflows",
+    "FastAPI backend services",
+    "Machine learning pipelines",
+    "MLOps and deployment"
+  ],
+  "experience": [
+    {
+      "title": "Freelance AI Engineer",
+      "company": "Independent Contractor",
+      "period": "2024 - Present",
+      "highlights": [
+        "Architects and develops custom AI-powered products and workflows for clients.",
+        "Designs multi-agent systems and GenAI applications using LLM APIs, LangChain, and LangGraph.",
+        "Bridges business requirements and technical implementation."
+      ]
+    },
+    {
+      "title": "Business & Help Desk Analyst",
+      "company": "Finnable Technologies Private Limited",
+      "location": "Bengaluru, Karnataka",
+      "period": "Nov 2024 - Aug 2025",
+      "highlights": [
+        "Performed exploratory data analysis, data cleaning, and transformation on incident datasets.",
+        "Improved ticket categorization workflows and operational reporting.",
+        "Built structured dashboards and documented technical workflows."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "title": "Network Security ML Pipeline",
+      "subtitle": "Phishing Website Detection",
+      "tech_stack": ["Python", "Docker", "FastAPI", "AWS", "MLflow", "GitHub Actions"],
+      "results": ["Achieved 94% accuracy", "Deployed containerized REST API on AWS EC2"],
+      "highlights": [
+        "Built an end-to-end ML pipeline for phishing website detection.",
+        "Automated ingestion, validation, feature engineering, training, and evaluation.",
+        "Integrated MLflow for experiment tracking and model versioning.",
+        "Implemented CI/CD with GitHub Actions."
+      ]
+    },
+    {
+      "title": "Multi AI Agent Platform",
+      "tech_stack": ["Groq", "LangGraph", "LangChain", "FastAPI", "Streamlit", "Docker", "Tavily"],
+      "results": ["Scalable multi-agent orchestration", "Real-time web search and conversational memory"],
+      "highlights": [
+        "Developed a multi-agent AI platform using LangGraph and Groq.",
+        "Integrated Tavily Search for real-time retrieval.",
+        "Implemented conversational memory and customizable system prompts.",
+        "Designed modular workflows for multi-model communication."
+      ]
+    },
+    {
+      "title": "IntelliCore Intelligent RAG AI",
+      "tech_stack": ["React", "TypeScript", "FastAPI", "LangGraph", "LangChain", "Groq", "ChromaDB", "SQLite", "Tavily"],
+      "results": ["Full-stack AI Engineer portfolio", "Persistent chat history", "Document-aware assistant"],
+      "highlights": [
+        "Combines an AI portfolio website with a RAG-enabled assistant.",
+        "Supports document upload, web search, memory, and conversation persistence.",
+        "Demonstrates production-style full-stack GenAI engineering."
+      ]
+    }
+  ],
+  "skills": {
+    "programming": ["Python", "SQL", "MongoDB"],
+    "ai_ml": ["Transformers", "Scikit-learn", "TensorFlow", "XGBoost", "MLflow", "Pandas", "NumPy"],
+    "generative_ai": ["Prompt Engineering", "LLM APIs", "Groq API", "AI Agents"],
+    "llm_engineering": ["LangChain", "LangGraph", "RAG", "Vector Databases"],
+    "backend": ["FastAPI", "Flask", "REST APIs"],
+    "cloud_devops": ["Docker", "AWS EC2", "GitHub Actions"],
+    "analytics": ["Power BI", "Microsoft Excel", "EDA", "Pivot Tables"],
+    "visualization": ["Matplotlib", "Seaborn"]
+  },
+  "education": {
+    "degree": "Bachelor of Computer Applications",
+    "institution": "Aryabhatta Knowledge University, Patna",
+    "period": "Sep 2021 - Sep 2024",
+    "cgpa": "8.31/10"
+  },
+  "certifications": [
+    "Data Science with Generative AI - Physics Wallah (2025)",
+    "Python with DSA (2025)",
+    "Cloud Computing Certificate",
+    "Power BI Certificate"
+  ],
+  "links": {
+    "github": "https://github.com/Abhi956967",
+    "linkedin": "https://www.linkedin.com"
+  }
+}

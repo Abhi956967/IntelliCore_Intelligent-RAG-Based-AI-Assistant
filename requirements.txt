@@ -3,9 +3,11 @@ uvicorn
 jinja2
 python-multipart
 python-dotenv
+certifi
 
 langchain
 langchain-google-genai
+langchain-groq
 langchain-core
 langgraph
 langchain-text-splitters

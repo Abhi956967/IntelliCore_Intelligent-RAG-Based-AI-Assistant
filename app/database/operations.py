@@ -1,12 +1,15 @@
 from datetime import datetime
+import os
 from pathlib import Path
 
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy import Boolean, create_engine, Column, Integer, String, Text, DateTime, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-Path("data").mkdir(exist_ok=True)
+STORAGE_DIR = Path(os.getenv("APP_STORAGE_DIR", "."))
+DATA_DIR = STORAGE_DIR / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-DATABASE_URL = "sqlite:///data/chatbot_memory.db"
+DATABASE_URL = f"sqlite:///{DATA_DIR / 'chatbot_memory.db'}"
 
 engine = create_engine(
     DATABASE_URL,
@@ -23,6 +26,7 @@ class Conversation(Base):
     id = Column(Integer, primary_key=True, index=True)
     thread_id = Column(String, unique=True, index=True)
     title = Column(String, default="New Chat")
+    pinned = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
 
@@ -48,6 +52,16 @@ class LongTermMemory(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    _run_lightweight_migrations()
+
+
+def _run_lightweight_migrations():
+    inspector = inspect(engine)
+    columns = {column["name"] for column in inspector.get_columns("conversations")}
+
+    with engine.begin() as conn:
+        if "pinned" not in columns:
+            conn.execute(text("ALTER TABLE conversations ADD COLUMN pinned BOOLEAN DEFAULT 0"))
 
 
 def create_or_update_conversation(thread_id: str, first_message: str | None = None):
@@ -81,6 +95,9 @@ def create_or_update_conversation(thread_id: str, first_message: str | None = No
             conversation.updated_at = datetime.utcnow()
 
         db.commit()
+        db.refresh(conversation)
+
+        return conversation
 
     finally:
         db.close()
@@ -92,9 +109,118 @@ def list_conversations():
     try:
         return (
             db.query(Conversation)
-            .order_by(Conversation.updated_at.desc())
+            .order_by(Conversation.pinned.desc(), Conversation.updated_at.desc())
             .all()
         )
+
+    finally:
+        db.close()
+
+
+def get_conversation(thread_id: str):
+    db = SessionLocal()
+
+    try:
+        return (
+            db.query(Conversation)
+            .filter(Conversation.thread_id == thread_id)
+            .first()
+        )
+
+    finally:
+        db.close()
+
+
+def search_conversations(query: str):
+    db = SessionLocal()
+
+    try:
+        clean_query = query.strip()
+
+        if not clean_query:
+            return list_conversations()
+
+        like_query = f"%{clean_query}%"
+
+        return (
+            db.query(Conversation)
+            .outerjoin(ChatMessage, ChatMessage.thread_id == Conversation.thread_id)
+            .filter(
+                (Conversation.title.ilike(like_query)) |
+                (ChatMessage.content.ilike(like_query))
+            )
+            .group_by(Conversation.id)
+            .order_by(Conversation.pinned.desc(), Conversation.updated_at.desc())
+            .all()
+        )
+
+    finally:
+        db.close()
+
+
+def update_conversation(thread_id: str, title: str | None = None, pinned: bool | None = None):
+    db = SessionLocal()
+
+    try:
+        conversation = (
+            db.query(Conversation)
+            .filter(Conversation.thread_id == thread_id)
+            .first()
+        )
+
+        if not conversation:
+            return None
+
+        if title is not None:
+            clean_title = title.strip()
+            if clean_title:
+                conversation.title = clean_title[:120]
+
+        if pinned is not None:
+            conversation.pinned = pinned
+
+        conversation.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(conversation)
+
+        return conversation
+
+    finally:
+        db.close()
+
+
+def delete_conversation(thread_id: str):
+    db = SessionLocal()
+
+    try:
+        conversation = (
+            db.query(Conversation)
+            .filter(Conversation.thread_id == thread_id)
+            .first()
+        )
+
+        if not conversation:
+            return False
+
+        db.query(ChatMessage).filter(ChatMessage.thread_id == thread_id).delete()
+        db.query(LongTermMemory).filter(LongTermMemory.thread_id == thread_id).delete()
+        db.delete(conversation)
+        db.commit()
+
+        return True
+
+    finally:
+        db.close()
+
+
+def delete_all_conversations():
+    db = SessionLocal()
+
+    try:
+        db.query(ChatMessage).delete()
+        db.query(LongTermMemory).delete()
+        db.query(Conversation).delete()
+        db.commit()
 
     finally:
         db.close()

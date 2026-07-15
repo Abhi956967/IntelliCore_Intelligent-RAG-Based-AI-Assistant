@@ -1,7 +1,10 @@
-from agent import get_agent
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
+from app.agents.chatbot_agent import get_agent
 from langchain_core.messages import SystemMessage, HumanMessage
-from database import init_db
-from database import init_db
+from app.database.operations import init_db
 
 init_db()
 

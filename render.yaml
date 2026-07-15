@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: intellicore-backend
+    runtime: python
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && cd frontend && npm ci && npm run build
+    startCommand: python run.py
+    autoDeployTrigger: commit
+    disk:
+      name: intellicore-data
+      mountPath: /var/data
+      sizeGB: 5
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENV
+        value: production
+      - key: APP_STORAGE_DIR
+        value: /var/data
+      - key: LLM_PROVIDER
+        value: groq
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: GROQ_MODEL
+        value: llama-3.1-8b-instant
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false

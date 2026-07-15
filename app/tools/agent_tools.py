@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from langchain_core.tools import tool
 from langchain_tavily import TavilySearch
 from app.database.operations import save_memory, search_memory
+from app.portfolio.knowledge import search_portfolio_knowledge
 from app.rag.service import retrieve_from_rag
 
 
@@ -51,6 +52,19 @@ def calculator(expression: str) -> str:
 
 
 @tool
+def search_portfolio(query: str) -> str:
+    """
+    Search structured portfolio knowledge about Abhishek Maurya, including
+    summary, experience, projects, skills, education, certifications, contact,
+    and IntelliCore architecture.
+    Use this for portfolio, resume/profile, project, skills, hiring-fit,
+    GitHub, education, and contact questions about Abhishek.
+    """
+
+    return search_portfolio_knowledge(query)
+
+
+@tool
 def search_uploaded_documents(query: str) -> str:
     """
     Search uploaded documents for relevant information.
@@ -96,6 +110,7 @@ def recall_memory(query: str) -> str:
 
 tools = [
     calculator,
+    search_portfolio,
     search_uploaded_documents,
     remember_this,
     recall_memory,

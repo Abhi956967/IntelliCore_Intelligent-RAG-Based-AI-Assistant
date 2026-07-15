@@ -1,4 +1,4 @@
-# BappyGPT — Agentic AI Chatbot
+# Intelligent RAG-Based AI Assistant — Agentic AI Chatbot
 
 BappyGPT is a full-stack Agentic AI chatbot built with **FastAPI, LangGraph, Google Gemini, Tavily, RAG, ChromaDB, and SQLite**. It can answer normal questions, stream responses, search the web, read uploaded documents, perform calculations, and save long-term conversation memory.
 
