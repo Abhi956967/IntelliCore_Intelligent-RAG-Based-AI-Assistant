@@ -37,10 +37,13 @@ interface Conversation {
   updated_at: string
 }
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || ''
+const rawApiUrl = (import.meta as any).env?.VITE_API_URL
+const API_URL = rawApiUrl?.trim() ? rawApiUrl.trim().replace(/\/$/, '') : ''
 const CHAT_MODEL = 'llama-3.1-8b-instant'
 const CURRENT_CONVERSATION_KEY = 'intellicore.currentConversationId'
 const THEME_KEY = 'intellicore.theme'
+
+const getApiUrl = (path: string) => API_URL ? `${API_URL}${path}` : path
 
 const starterPrompts = [
   'Summarize Abhishek from the uploaded resume',
@@ -142,10 +145,10 @@ export default function ChatWindow() {
   }, [input])
 
   const loadConversations = async (query = '') => {
-    const url = new URL(`${API_URL}/api/conversations`)
+    const url = new URL(getApiUrl('/api/conversations'), window.location.origin)
     if (query.trim()) url.searchParams.set('q', query.trim())
 
-    const response = await fetch(url)
+    const response = await fetch(url.toString())
     const data = await response.json()
     const items: Conversation[] = data.conversations || []
 
@@ -158,7 +161,7 @@ export default function ChatWindow() {
   }
 
   const loadMessages = async (conversationId: string) => {
-    const response = await fetch(`${API_URL}/api/conversations/${conversationId}/messages`)
+    const response = await fetch(getApiUrl(`/api/conversations/${conversationId}/messages`))
 
     if (!response.ok) {
       setMessages([])
@@ -170,7 +173,7 @@ export default function ChatWindow() {
   }
 
   const createConversation = async (title = 'New Chat') => {
-    const response = await fetch(`${API_URL}/api/conversations`, {
+    const response = await fetch(getApiUrl('/api/conversations'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title }),
@@ -187,7 +190,7 @@ export default function ChatWindow() {
   }
 
   const patchConversation = async (conversationId: string, payload: Partial<Pick<Conversation, 'title' | 'pinned'>>) => {
-    const response = await fetch(`${API_URL}/api/conversations/${conversationId}`, {
+    const response = await fetch(getApiUrl(`/api/conversations/${conversationId}`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -200,7 +203,7 @@ export default function ChatWindow() {
   }
 
   const deleteConversationById = async (conversationId: string) => {
-    await fetch(`${API_URL}/api/conversations/${conversationId}`, { method: 'DELETE' })
+    await fetch(getApiUrl(`/api/conversations/${conversationId}`), { method: 'DELETE' })
     const remaining = conversations.filter(item => item.conversation_id !== conversationId)
     setConversations(remaining)
 
@@ -217,7 +220,7 @@ export default function ChatWindow() {
   const deleteAll = async () => {
     if (!window.confirm('Delete all conversations?')) return
 
-    await fetch(`${API_URL}/api/conversations`, { method: 'DELETE' })
+    await fetch(getApiUrl('/api/conversations'), { method: 'DELETE' })
     setConversations([])
     setMessages([])
     setActiveConversationId(null)
@@ -262,7 +265,7 @@ export default function ChatWindow() {
         return [...prev, { role: 'assistant', content: '' }]
       })
 
-      const response = await fetch(`${API_URL}/chat/stream`, {
+      const response = await fetch(getApiUrl('/chat/stream'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
