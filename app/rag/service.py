@@ -164,6 +164,9 @@ def retrieve_from_rag(query: str, thread_id: str, k: int = 4) -> str:
     if not docs:
         return "No relevant uploaded document content found."
 
+    from app.storage import current_sources
+    sources = list(current_sources.get())
+
     results = []
 
     for i, doc in enumerate(docs, start=1):
@@ -174,5 +177,29 @@ def retrieve_from_rag(query: str, thread_id: str, k: int = 4) -> str:
         results.append(
             f"[Document Source {i}: {source}{location}]\n{doc.page_content}"
         )
+        
+        # Avoid duplicate sources in the same request
+        src_exists = any(s.get("name") == source and s.get("snippet") == doc.page_content for s in sources)
+        if not src_exists:
+            sources.append({
+                "name": source,
+                "type": "resume" if "resume" in source.lower() else "document",
+                "snippet": doc.page_content,
+                "page": page,
+                "section": section
+            })
 
+    current_sources.set(sources)
     return "\n\n".join(results)
+
+
+def delete_document_from_rag(filename: str, thread_id: str):
+    """Delete all chunks for a specific document and thread from ChromaDB"""
+    try:
+        vectorstore.delete(where={"$and": [{"thread_id": {"$eq": thread_id}}, {"source": {"$eq": filename}}]})
+    except Exception as e:
+        # Fallback if the collection format doesn't support $and directly in this version
+        try:
+            vectorstore.delete(where={"thread_id": thread_id, "source": filename})
+        except Exception:
+            raise e

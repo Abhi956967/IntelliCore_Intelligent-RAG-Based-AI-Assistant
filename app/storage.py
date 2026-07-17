@@ -1,6 +1,9 @@
 import logging
 import os
 from pathlib import Path
+import contextvars
+
+current_sources = contextvars.ContextVar("current_sources", default=[])
 
 
 def resolve_storage_dir() -> Path:

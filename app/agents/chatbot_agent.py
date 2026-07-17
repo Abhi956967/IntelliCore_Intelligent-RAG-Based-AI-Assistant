@@ -56,10 +56,11 @@ You can:
 2. Use tools when needed.
 3. Search structured portfolio data about Abhishek Maurya.
 4. Search uploaded documents using the RAG tool.
-5. Search the web for latest/current information using Tavily Search.
+5. Search the web for latest/current information using Tavily Search (supports 'general' and 'news' topics).
 6. Remember important user information using the memory tool.
-7. Recall memory when useful.
-8. Use calculator for math.
+7. Recall memory when useful (long-term memory is shared globally across all conversations).
+8. List past conversation threads and retrieve their chat histories.
+9. Use calculator for math.
 
 Rules:
 - If the user asks about Abhishek, his portfolio, projects, skills, experience, education, certifications, GitHub, contact details, or suitability for an AI/ML role, call search_portfolio unless they explicitly ask about an uploaded file.
@@ -67,10 +68,11 @@ Rules:
 - If search_uploaded_documents returns relevant content, answer from that content and mention the uploaded document context naturally.
 - Clearly distinguish whether an answer is based on portfolio knowledge, uploaded documents, memory, or web search.
 - Do not answer uploaded-resume questions from public/general knowledge unless the document search found nothing and the user explicitly asks for web/general information.
-- If the user asks about latest news, current events, recent updates, today's information, current prices, current people, current versions, new releases, or anything time-sensitive, use Tavily Search.
+- If the user asks about latest news, current events, recent updates, today's information, current prices, current people, current versions, new releases, or anything time-sensitive, use Tavily Search. By default, use topic='general'. However, if the query asks specifically for latest news, sports updates, politics, or recent articles, use topic='news'.
 - If the user asks about an uploaded document, use search_uploaded_documents.
 - If the user asks you to remember something, use remember_this.
 - If the user asks about previous preferences or saved facts, use recall_memory.
+- If the user refers to "yesterday's conversation", past sessions, or asks you to find details/names discussed in a previous chat, use list_past_conversations first to find the thread ID, and then get_past_conversation_history with that thread ID to read the messages.
 - Use calculator for math questions.
 - When using web search, summarize clearly and mention that the answer is based on web search results.
 - Be direct, warm, and concise. Use short sections or bullets when they improve readability.
@@ -117,20 +119,38 @@ def build_agent(model_name: str):
     provider = get_model_provider(selected_model)
 
     if provider == "groq":
-        llm = ChatGroq(
+        primary_llm = ChatGroq(
             model=selected_model,
             temperature=0.7,
             max_retries=3,
         )
+        
+        fallback_model = normalize_model_name(DEFAULT_GEMINI_MODEL)
+        fallback_llm = ChatGoogleGenerativeAI(
+            model=fallback_model,
+            google_api_key=os.getenv("GOOGLE_API_KEY"),
+            temperature=0.7,
+            max_retries=3,
+        )
     else:
-        llm = ChatGoogleGenerativeAI(
+        primary_llm = ChatGoogleGenerativeAI(
             model=selected_model,
             google_api_key=os.getenv("GOOGLE_API_KEY"),
             temperature=0.7,
             max_retries=3,
         )
+        
+        fallback_model = normalize_model_name(DEFAULT_GROQ_MODEL)
+        fallback_llm = ChatGroq(
+            model=fallback_model,
+            temperature=0.7,
+            max_retries=3,
+        )
 
-    llm_with_tools = llm.bind_tools(tools)
+    primary_with_tools = primary_llm.bind_tools(tools)
+    fallback_with_tools = fallback_llm.bind_tools(tools)
+
+    llm_with_tools = primary_with_tools.with_fallbacks([fallback_with_tools], exceptions_to_handle=(Exception,))
 
     def chatbot_node(state: MessagesState):
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + state["messages"]

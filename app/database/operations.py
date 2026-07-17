@@ -36,6 +36,7 @@ class ChatMessage(Base):
     thread_id = Column(String, index=True)
     role = Column(String)
     content = Column(Text)
+    sources_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -48,6 +49,18 @@ class LongTermMemory(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class UploadedFile(Base):
+    __tablename__ = "uploaded_files"
+
+    id = Column(Integer, primary_key=True, index=True)
+    file_id = Column(String, unique=True, index=True)
+    thread_id = Column(String, index=True)
+    filename = Column(String)
+    file_path = Column(String)
+    chunks_count = Column(Integer)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
     _run_lightweight_migrations()
@@ -56,10 +69,13 @@ def init_db():
 def _run_lightweight_migrations():
     inspector = inspect(engine)
     columns = {column["name"] for column in inspector.get_columns("conversations")}
+    columns_msg = {column["name"] for column in inspector.get_columns("chat_messages")}
 
     with engine.begin() as conn:
         if "pinned" not in columns:
             conn.execute(text("ALTER TABLE conversations ADD COLUMN pinned BOOLEAN DEFAULT 0"))
+        if "sources_json" not in columns_msg:
+            conn.execute(text("ALTER TABLE chat_messages ADD COLUMN sources_json TEXT DEFAULT NULL"))
 
 
 def create_or_update_conversation(thread_id: str, first_message: str | None = None):
@@ -202,6 +218,7 @@ def delete_conversation(thread_id: str):
 
         db.query(ChatMessage).filter(ChatMessage.thread_id == thread_id).delete()
         db.query(LongTermMemory).filter(LongTermMemory.thread_id == thread_id).delete()
+        db.query(UploadedFile).filter(UploadedFile.thread_id == thread_id).delete()
         db.delete(conversation)
         db.commit()
 
@@ -217,6 +234,7 @@ def delete_all_conversations():
     try:
         db.query(ChatMessage).delete()
         db.query(LongTermMemory).delete()
+        db.query(UploadedFile).delete()
         db.query(Conversation).delete()
         db.commit()
 
@@ -224,7 +242,7 @@ def delete_all_conversations():
         db.close()
 
 
-def save_chat_message(thread_id: str, role: str, content: str):
+def save_chat_message(thread_id: str, role: str, content: str, sources_json: str | None = None):
     db = SessionLocal()
 
     try:
@@ -232,6 +250,7 @@ def save_chat_message(thread_id: str, role: str, content: str):
             thread_id=thread_id,
             role=role,
             content=content,
+            sources_json=sources_json,
             created_at=datetime.utcnow()
         )
 
@@ -290,11 +309,11 @@ def search_memory(thread_id: str, query: str):
     db = SessionLocal()
 
     try:
+        # Search all memories across all threads to allow cross-session memory!
         memories = (
             db.query(LongTermMemory)
-            .filter(LongTermMemory.thread_id == thread_id)
             .order_by(LongTermMemory.created_at.desc())
-            .limit(20)
+            .limit(30)
             .all()
         )
 
@@ -303,5 +322,54 @@ def search_memory(thread_id: str, query: str):
 
         return "\n".join([f"- {m.memory}" for m in memories])
 
+    finally:
+        db.close()
+
+
+def save_uploaded_file(thread_id: str, file_id: str, filename: str, file_path: str, chunks_count: int):
+    db = SessionLocal()
+    try:
+        item = UploadedFile(
+            thread_id=thread_id,
+            file_id=file_id,
+            filename=filename,
+            file_path=file_path,
+            chunks_count=chunks_count,
+            created_at=datetime.utcnow()
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+        return item
+    finally:
+        db.close()
+
+
+def list_uploaded_files(thread_id: str):
+    db = SessionLocal()
+    try:
+        return (
+            db.query(UploadedFile)
+            .filter(UploadedFile.thread_id == thread_id)
+            .order_by(UploadedFile.created_at.desc())
+            .all()
+        )
+    finally:
+        db.close()
+
+
+def delete_uploaded_file(thread_id: str, file_id: str):
+    db = SessionLocal()
+    try:
+        item = (
+            db.query(UploadedFile)
+            .filter(UploadedFile.thread_id == thread_id, UploadedFile.file_id == file_id)
+            .first()
+        )
+        if not item:
+            return None
+        db.delete(item)
+        db.commit()
+        return item
     finally:
         db.close()

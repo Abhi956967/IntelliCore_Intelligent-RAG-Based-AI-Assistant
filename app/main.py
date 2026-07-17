@@ -38,9 +38,13 @@ from app.database.operations import (
     get_conversation,
     list_conversations,
     search_conversations,
-    update_conversation)
+    update_conversation,
+    save_uploaded_file,
+    list_uploaded_files,
+    delete_uploaded_file
+)
 
-from app.rag.service import add_document_to_rag
+from app.rag.service import add_document_to_rag, delete_document_from_rag
 from app.tools.agent_tools import set_current_thread_id
 from app.portfolio.knowledge import portfolio_profile
 
@@ -94,6 +98,12 @@ def conversation_payload(item):
 
 
 def message_payload(msg):
+    sources = []
+    if getattr(msg, "sources_json", None):
+        try:
+            sources = json.loads(msg.sources_json)
+        except Exception:
+            pass
     return {
         "message_id": str(msg.id),
         "conversation_id": msg.thread_id,
@@ -101,7 +111,7 @@ def message_payload(msg):
         "role": msg.role,
         "content": msg.content,
         "timestamp": msg.created_at.isoformat(),
-        "sources": [],
+        "sources": sources,
         "attachments": [],
         "metadata": {}
     }
@@ -326,9 +336,19 @@ async def upload_document(
             thread_id=thread_id
         )
 
+        # Save uploaded file in database
+        save_uploaded_file(
+            thread_id=thread_id,
+            file_id=file_id,
+            filename=filename,
+            file_path=str(file_path),
+            chunks_count=result["chunks"]
+        )
+
         return JSONResponse({
             "success": True,
-            "message": f"Uploaded {result['filename']} and created {result['chunks']} chunks."
+            "message": f"Uploaded {result['filename']} and created {result['chunks']} chunks.",
+            "file_id": file_id
         })
 
     except Exception as e:
@@ -339,6 +359,53 @@ async def upload_document(
             },
             status_code=500
         )
+
+
+@app.get("/api/conversations/{conversation_id}/files")
+async def get_conversation_files(conversation_id: str):
+    """Retrieve list of files uploaded to a specific conversation"""
+    try:
+        files = list_uploaded_files(conversation_id)
+        return {
+            "files": [
+                {
+                    "file_id": f.file_id,
+                    "filename": f.filename,
+                    "chunks_count": f.chunks_count,
+                    "created_at": f.created_at.isoformat()
+                }
+                for f in files
+            ]
+        }
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.delete("/api/conversations/{conversation_id}/files/{file_id}")
+async def delete_conversation_file(conversation_id: str, file_id: str):
+    """Delete a specific file from ChromaDB, local uploads directory, and database"""
+    try:
+        file_rec = delete_uploaded_file(conversation_id, file_id)
+        if not file_rec:
+            return JSONResponse({"error": "File record not found"}, status_code=404)
+
+        # Delete file from local file system
+        try:
+            p = Path(file_rec.file_path)
+            if p.exists():
+                p.unlink()
+        except Exception:
+            pass
+
+        # Delete document from RAG vectorstore
+        try:
+            delete_document_from_rag(filename=file_rec.filename, thread_id=conversation_id)
+        except Exception:
+            pass
+
+        return {"success": True, "message": f"Successfully deleted {file_rec.filename}"}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 
@@ -417,20 +484,15 @@ def extract_text_from_chunk(chunk) -> str:
 def format_chat_error(error: Exception) -> str:
     message = str(error)
 
-    if "RESOURCE_EXHAUSTED" in message or "429" in message:
-        return (
-            "The selected AI provider quota or rate limit was exceeded. "
-            "Please check your provider billing/quota, wait for the quota to reset, "
-            "or switch to another available model/API key."
-        )
-
+    # If it is explicitly an invalid API key issue, let the developer know.
     if "API_KEY_INVALID" in message or "API key not valid" in message:
         return "The Gemini API key is invalid. Please update GOOGLE_API_KEY in your .env file."
 
     if "invalid_api_key" in message or "Invalid API Key" in message:
         return "The Groq API key is invalid. Please update GROQ_API_KEY in your .env file."
 
-    return message
+    # Otherwise, return the friendly message for any other failures (quota, rate limit, server error, timeout, network failure, etc.).
+    return "Both AI providers are temporarily unavailable. Please try again in a few moments."
 
 
 def recent_context_message(thread_id: str, limit: int = 10) -> SystemMessage | None:
@@ -496,6 +558,8 @@ async def chat_stream(request: Request):
 
     def event_generator():
         final_answer = ""
+        from app.storage import current_sources
+        current_sources.set([])
 
         try:
             input_messages = []
@@ -509,11 +573,34 @@ async def chat_stream(request: Request):
                 "messages": input_messages
             }
 
+            sent_statuses = set()
+
             for chunk, metadata in agent.stream(
                 inputs,
                 config=config,
                 stream_mode="messages"
             ):
+                # Check for tool execution status
+                tool_calls = getattr(chunk, "tool_calls", None)
+                if not tool_calls and hasattr(chunk, "additional_kwargs"):
+                    tool_calls = chunk.additional_kwargs.get("tool_calls")
+
+                if tool_calls:
+                    for tc in tool_calls:
+                        tool_name = tc.get("name") if isinstance(tc, dict) else getattr(tc, "name", None)
+                        if tool_name and tool_name not in sent_statuses:
+                            sent_statuses.add(tool_name)
+                            status_msg = f"Running {tool_name.replace('_', ' ')}..."
+                            if tool_name == "tavily_search":
+                                status_msg = "Searching the web..."
+                            elif tool_name == "search_uploaded_documents":
+                                status_msg = "Reading uploaded documents..."
+                            elif tool_name == "search_portfolio":
+                                status_msg = "Searching Abhishek's portfolio..."
+                            elif tool_name == "calculator":
+                                status_msg = "Computing math calculation..."
+                            yield sse_data({"status": status_msg})
+
                 if not should_stream_chunk(chunk, metadata):
                     continue
 
@@ -523,8 +610,14 @@ async def chat_stream(request: Request):
                     final_answer += token
                     yield sse_data({"token": token})
 
+            # Stream collected citations / sources if any
+            sources = current_sources.get()
+            if sources:
+                yield sse_data({"sources": sources})
+
             if final_answer.strip():
-                save_chat_message(thread_id, "assistant", final_answer)
+                sources_str = json.dumps(sources) if sources else None
+                save_chat_message(thread_id, "assistant", final_answer, sources_str)
 
             yield sse_data({"done": True})
 
