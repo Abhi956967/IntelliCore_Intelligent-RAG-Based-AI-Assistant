@@ -1,7 +1,7 @@
 ## Demo
 [Link:](https://github.com/Abhi956967/IntelliCore_Intelligent-RAG-Based-AI-Assistant/blob/main/intellicore-intelligent-ai-assistant.mp4)
 
-https://github.com/Abhi956967/IntelliCore_Intelligent-RAG-Based-AI-Assistant/blob/main/intellicore-intelligent-ai-assistant.mp4
+https://github.com/user-attachments/assets/af332c35-b5dc-468e-a1a9-f858084321de
 
 # Intelligent RAG-Based AI Assistant — Agentic AI Chatbot
 
