@@ -1,398 +1,372 @@
-import { useState, useEffect, useRef } from 'react'
-import { 
-  ArrowRight, 
-  Bot, 
-  FileText, 
-  Zap, 
-  Cpu, 
-  Code2, 
-  Database, 
-  MapPin,
-  ArrowDown,
-  Activity,
-  Workflow
-} from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { motion, useMotionTemplate, useMotionValue } from 'framer-motion'
+import { Zap, Github, FileText, Play, Cpu, Server, Network } from 'lucide-react'
 
-type Tab = 'chat' | 'rag' | 'metrics'
+// Helper for animated counters that trigger when visible
+function Counter({ value, duration = 1.5 }: { value: number; duration?: number }) {
+  const [count, setCount] = useState(0)
+  const [started, setStarted] = useState(false)
 
-interface ChatMessage {
-  sender: 'user' | 'assistant'
-  text: string
-  isStreaming?: boolean
-}
+  useEffect(() => {
+    if (!started) return
 
-const PROMPTS = {
-  stack: {
-    question: "What is Abhishek's core tech stack?",
-    steps: ["Connecting to Vector DB...", "Querying ChromaDB index...", "Synthesizing tech profile..."],
-    answer: "Abhishek's primary engineering stack includes Python, FastAPI, LangGraph, Docker, ChromaDB, AWS EC2, and MLflow for model tracking."
-  },
-  experience: {
-    question: "Summarize his professional experience.",
-    steps: ["Scanning resume embeddings...", "Found 2 matching experience nodes...", "Formatting summary..."],
-    answer: "He is currently working as a Freelance AI Engineer developing GenAI apps and agents. Previously, he was a Business & Help Desk Analyst at Finnable Technologies (EDA, data cleaning, and reporting)."
-  },
-  projects: {
-    question: "Tell me about his active AI projects.",
-    steps: ["Retrieving project metadata...", "Parsing Network Security ML Pipeline details...", "Structuring project cards..."],
-    answer: "He recently built a Network Security ML Pipeline (94% detection accuracy using Docker & MLflow) and a Multi-AI Agent Platform integrating Groq, LangGraph, and Tavily search."
-  }
+    let startTime: number | null = null
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp
+      const progress = Math.min((timestamp - startTime) / (duration * 1000), 1)
+      const currentCount = Math.floor(progress * value)
+      setCount(currentCount)
+      if (progress < 1) {
+        window.requestAnimationFrame(step)
+      }
+    };
+    window.requestAnimationFrame(step)
+  }, [value, duration, started])
+
+  return (
+    <motion.span
+      onViewportEnter={() => setStarted(true)}
+      viewport={{ once: true, margin: '-50px' }}
+    >
+      {count}
+    </motion.span>
+  )
 }
 
 export default function Hero({ setShowChat }: { setShowChat: (show: boolean) => void }) {
-  const [activeTab, setActiveTab] = useState<Tab>('chat')
-  const [chatLogs, setChatLogs] = useState<ChatMessage[]>([
-    { sender: 'user', text: 'Tell me about Abhishek from this resume.' },
-    { sender: 'assistant', text: 'Abhishek Maurya is a Machine Learning Engineer and Freelance AI Developer building RAG apps, multi-agent systems, and FastAPI ML services.' }
-  ])
-  const [typingStatus, setTypingStatus] = useState<string>('')
-  const [isTyping, setIsTyping] = useState<boolean>(false)
-  const [metrics, setMetrics] = useState({ cpu: 12, ram: 42, latency: 84 })
-  const chatEndRef = useRef<HTMLDivElement>(null)
+  // Mouse Glow effect tracker
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
 
-  // Fluctuating system metrics simulation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMetrics(prev => ({
-        cpu: Math.max(5, Math.min(35, prev.cpu + Math.floor(Math.random() * 7) - 3)),
-        ram: Math.max(38, Math.min(45, prev.ram + Math.floor(Math.random() * 3) - 1)),
-        latency: Math.max(78, Math.min(92, prev.latency + Math.floor(Math.random() * 5) - 2))
-      }))
-    }, 1500)
-    return () => clearInterval(interval)
-  }, [])
-
-  // Auto-scroll chat window
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [chatLogs, typingStatus])
-
-  const handlePromptClick = (key: keyof typeof PROMPTS) => {
-    if (isTyping) return
-    setIsTyping(true)
-    
-    const prompt = PROMPTS[key]
-    
-    // Add user message
-    setChatLogs(prev => [...prev, { sender: 'user', text: prompt.question }])
-    
-    // Simulate thinking steps
-    let stepIdx = 0
-    setTypingStatus(prompt.steps[0])
-    
-    const stepInterval = setInterval(() => {
-      stepIdx++
-      if (stepIdx < prompt.steps.length) {
-        setTypingStatus(prompt.steps[stepIdx])
-      } else {
-        clearInterval(stepInterval)
-        setTypingStatus('')
-        
-        // Start streaming the answer
-        let charIdx = 0
-        const fullAnswer = prompt.answer
-        setChatLogs(prev => [...prev, { sender: 'assistant', text: '', isStreaming: true }])
-        
-        const charInterval = setInterval(() => {
-          setChatLogs(prev => {
-            const next = [...prev]
-            const last = next[next.length - 1]
-            if (last && last.sender === 'assistant') {
-              last.text = fullAnswer.substring(0, charIdx + 1)
-            }
-            return next
-          })
-          charIdx++
-          if (charIdx >= fullAnswer.length) {
-            clearInterval(charInterval)
-            setChatLogs(prev => {
-              const next = [...prev]
-              const last = next[next.length - 1]
-              if (last && last.sender === 'assistant') {
-                delete last.isStreaming
-              }
-              return next
-            })
-            setIsTyping(false)
-          }
-        }, 12)
-      }
-    }, 600)
+  function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
+    const { left, top } = currentTarget.getBoundingClientRect()
+    mouseX.set(clientX - left)
+    mouseY.set(clientY - top)
   }
 
-  const tags = [
-    { label: 'Machine Learning Engineer', icon: Cpu },
-    { label: 'Freelance AI Developer', icon: Code2 },
-    { label: 'FastAPI + LangGraph', icon: Database },
-    { label: 'Delhi, India', icon: MapPin }
+  // Typing headline animation
+  const roles = [
+    "Machine Learning Engineer",
+    "Generative AI Engineer",
+    "FastAPI & LangGraph Specialist",
+    "Autonomous Agent Architect"
+  ]
+  const [currentRoleIndex, setCurrentRoleIndex] = useState(0)
+  const [currentText, setCurrentText] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [typingSpeed, setTypingSpeed] = useState(100)
+
+  useEffect(() => {
+    let timer: any
+    const fullText = roles[currentRoleIndex]
+
+    const handleType = () => {
+      if (!isDeleting) {
+        setCurrentText(fullText.substring(0, currentText.length + 1))
+        setTypingSpeed(80)
+
+        if (currentText === fullText) {
+          timer = setTimeout(() => setIsDeleting(true), 2000) // Hold word
+          return
+        }
+      } else {
+        setCurrentText(fullText.substring(0, currentText.length - 1))
+        setTypingSpeed(45)
+
+        if (currentText === '') {
+          setIsDeleting(false)
+          setCurrentRoleIndex((prev) => (prev + 1) % roles.length)
+          setTypingSpeed(150)
+          return
+        }
+      }
+
+      timer = setTimeout(handleType, typingSpeed)
+    }
+
+    timer = setTimeout(handleType, typingSpeed)
+    return () => clearTimeout(timer)
+  }, [currentText, isDeleting, currentRoleIndex])
+
+  // Stat item array
+  const stats = [
+    { label: 'DSA Problems Solved', value: 300, suffix: '+' },
+    { label: 'AI Projects Built', value: 20, suffix: '+' },
+    { label: 'Certifications', value: 10, suffix: '+' },
+    { label: 'Deployments', value: 5, suffix: '+' },
+    { label: 'GitHub Commits', value: 1000, suffix: '+' },
+  ]
+
+  // Floating nodes list for right column
+  const floatingLabels = [
+    { name: 'RAG Pipeline', color: 'from-cyan-500 to-blue-500', x: '15%', y: '15%', delay: 0 },
+    { name: 'LangGraph', color: 'from-violet-500 to-fuchsia-500', x: '82%', y: '20%', delay: 0.5 },
+    { name: 'Groq', color: 'from-amber-500 to-orange-500', x: '10%', y: '75%', delay: 1 },
+    { name: 'Gemini', color: 'from-blue-500 to-indigo-600', x: '80%', y: '78%', delay: 1.5 },
+    { name: 'Multi-LLM', color: 'from-emerald-500 to-teal-500', x: '18%', y: '45%', delay: 2 },
+    { name: 'Vector Search', color: 'from-sky-500 to-cyan-500', x: '78%', y: '50%', delay: 2.5 },
+    { name: 'Memory', color: 'from-rose-500 to-pink-500', x: '46%', y: '10%', delay: 3 },
+    { name: 'AI Agent', color: 'from-purple-500 to-indigo-500', x: '48%', y: '88%', delay: 3.5 },
   ]
 
   return (
-    <section className="relative px-4 py-20 md:py-28 bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_40%,#eff6ff_100%)] overflow-hidden bg-grid-glow">
-      {/* Decorative Blur Orbs */}
-      <div className="absolute top-1/4 left-[10%] w-96 h-96 bg-primary-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-slow-glow"></div>
-      <div className="absolute top-1/3 right-[10%] w-96 h-96 bg-accent-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-slow-glow [animation-delay:4s]"></div>
+    <section
+      id="home"
+      onMouseMove={handleMouseMove}
+      className="relative min-h-screen pt-24 pb-16 px-4 flex items-center bg-white dark:bg-slate-950 overflow-hidden bg-aurora bg-grid-glow group"
+    >
+      {/* Dynamic Cursor Glow Tracker */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0"
+        style={{
+          background: useMotionTemplate`
+            radial-gradient(
+              650px circle at ${mouseX}px ${mouseY}px,
+              rgba(14, 165, 233, 0.12),
+              transparent 80%
+            )
+          `
+        }}
+      />
 
-      <div className="max-w-7xl mx-auto relative z-10 grid lg:grid-cols-[1.02fr_0.98fr] gap-12 lg:gap-16 items-center">
+      {/* Floating Decorative Particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        {[...Array(6)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full bg-gradient-to-br from-primary-500/10 to-accent-500/10 blur-xl"
+            style={{
+              width: Math.random() * 150 + 100,
+              height: Math.random() * 150 + 100,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [0, Math.random() * 40 - 20, 0],
+              x: [0, Math.random() * 40 - 20, 0],
+              scale: [1, 1.05, 1],
+            }}
+            transition={{
+              duration: Math.random() * 6 + 6,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="max-w-7xl mx-auto w-full relative z-10 grid lg:grid-cols-[1.1fr_0.9fr] gap-12 lg:gap-16 items-center">
         {/* Left Column */}
-        <div className="animate-slideUp">
-          {/* System Status Badge */}
-          <div className="inline-flex items-center gap-2 bg-slate-900 text-slate-100 px-4 py-2 rounded-full mb-6 border border-slate-800 shadow-md hover:border-slate-700 transition-all duration-300">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="space-y-6 text-left"
+        >
+          {/* Status Badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/5 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="text-xs font-semibold uppercase tracking-wider">Active: Groq + LangGraph + RAG</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-350">
+              Available For Hire
+            </span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-slate-950 mb-4 tracking-tight leading-[1.1]">
-            Hi, I'm <span className="bg-gradient-to-r from-primary-600 via-accent-600 to-cyan-500 bg-clip-text text-transparent">Abhishek Maurya</span>
+          {/* Heading */}
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-slate-950 dark:text-white tracking-tight leading-[1.08]">
+            Build Intelligent <br />
+            <span className="bg-gradient-to-r from-primary-600 via-accent-500 to-cyan-500 dark:from-primary-400 dark:via-accent-400 dark:to-cyan-400 bg-clip-text text-transparent">
+              AI Agents
+            </span> with RAG, <br />
+            Multi-LLM & LangGraph
           </h1>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-700 mb-6">
-            Building Intelligent Agentic & ML Systems
-          </h2>
 
-          <p className="text-lg md:text-xl text-slate-600 mb-8 max-w-2xl leading-relaxed">
-            A production-focused AI engineer specializing in autonomous agent workflows, document intelligence pipelines (RAG), and high-performance FastAPI microservices.
+          {/* Typed Role */}
+          <div className="h-8 flex items-center">
+            <p className="text-lg sm:text-xl font-semibold text-slate-600 dark:text-slate-400">
+              I am a <span className="text-primary-600 dark:text-cyan-400 font-bold cursor-blink">{currentText}</span>
+            </p>
+          </div>
+
+          {/* Intro Description */}
+          <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed">
+            I build production-ready AI applications with modern technologies, multi-LLM support, vector databases, and intelligent orchestration workflows.
           </p>
 
-          {/* Interactive Tag Grid */}
-          <div className="flex flex-wrap gap-2.5 mb-10">
-            {tags.map(({ label, icon: Icon }) => (
-              <span 
-                key={label} 
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-700 rounded-xl text-sm font-semibold shadow-sm transition-all duration-300 hover:shadow transform hover:-translate-y-0.5"
-              >
-                <Icon className="w-4 h-4 text-primary-500" />
-                {label}
-              </span>
-            ))}
-          </div>
-
-          {/* Call-to-actions */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          {/* Action CTAs */}
+          <div className="flex flex-wrap gap-3.5 pt-2">
+            {/* Launch AI Agent */}
             <button
               onClick={() => setShowChat(true)}
-              className="group relative px-8 py-4 bg-slate-950 text-white rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-primary-200 hover:shadow-2xl flex items-center gap-2.5 justify-center transform hover:-translate-y-0.5 overflow-hidden z-10"
+              className="group relative px-6 py-3.5 bg-slate-950 dark:bg-white text-white dark:text-slate-950 rounded-xl font-bold text-sm transition-all duration-300 shadow-md hover:shadow-primary-500/20 hover:shadow-xl hover:scale-[1.02] flex items-center gap-2 overflow-hidden"
             >
-              {/* Button gradient hover overlay */}
-              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-primary-600 to-accent-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"></span>
-              <Zap className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
+              <Zap className="w-4 h-4 text-amber-500 fill-amber-500 group-hover:scale-110 transition-transform" />
               <span>Launch AI Agent</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
+
+            {/* GitHub */}
             <a
-              href="#portfolio"
-              className="px-8 py-4 border border-slate-200 text-slate-800 hover:border-slate-300 hover:text-slate-950 hover:bg-slate-50 bg-white rounded-xl font-bold transition-all text-center shadow-sm hover:shadow"
+              href="https://github.com/Abhi956967"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-3.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200/80 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/50 dark:border-slate-800 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-sm hover:scale-[1.02]"
             >
-              Explore Projects
+              <Github className="w-4 h-4" />
+              <span>GitHub</span>
             </a>
+
+            {/* Resume */}
+            <a
+              href="#contact"
+              className="px-5 py-3.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200/80 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/50 dark:border-slate-800 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-sm hover:scale-[1.02]"
+            >
+              <FileText className="w-4 h-4 text-primary-500" />
+              <span>Resume</span>
+            </a>
+
+            {/* Live Demo */}
+            <button
+              onClick={() => setShowChat(true)}
+              className="px-5 py-3.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200/80 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/50 dark:border-slate-800 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-sm hover:scale-[1.02]"
+            >
+              <Play className="w-4 h-4 text-emerald-500 fill-emerald-500/20" />
+              <span>Live Demo</span>
+            </button>
           </div>
-        </div>
 
-        {/* Right Column: Premium Terminal Dashboard */}
-        <div className="relative animate-float w-full max-w-lg lg:max-w-none mx-auto">
-          {/* External decorative glow overlay */}
-          <div className="absolute -inset-1.5 bg-gradient-to-r from-primary-500 to-accent-500 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 animate-tilt"></div>
-          
-          <div className="relative bg-slate-950 text-white border border-slate-800 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl">
-            {/* Window header / tabs */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-3.5 bg-slate-900 border-b border-slate-800 gap-3">
-              <div className="flex items-center gap-2">
-                {/* Simulated window control buttons */}
-                <div className="flex gap-1.5 mr-2">
-                  <span className="w-3 h-3 rounded-full bg-red-500/80"></span>
-                  <span className="w-3 h-3 rounded-full bg-yellow-500/80"></span>
-                  <span className="w-3 h-3 rounded-full bg-green-500/80"></span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-cyan-400" />
-                  <span className="font-bold text-xs tracking-wider text-slate-300">INTELLICORE-AGENT</span>
-                </div>
-              </div>
-              
-              {/* Tab Selector */}
-              <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
-                {(['chat', 'rag', 'metrics'] as Tab[]).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-3 py-1 rounded-md capitalize font-semibold transition-all ${
-                      activeTab === tab 
-                        ? 'bg-slate-800 text-white shadow-sm border border-slate-700/80' 
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {tab === 'metrics' ? 'telemetry' : tab}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Panel Body */}
-            <div className="p-5 h-[340px] flex flex-col justify-between overflow-y-auto custom-scrollbar">
-              
-              {/* TAB 1: INTERACTIVE CHAT */}
-              {activeTab === 'chat' && (
-                <div className="flex-1 flex flex-col justify-between h-full">
-                  <div className="space-y-4 overflow-y-auto custom-scrollbar pr-1 flex-1 mb-4 max-h-[220px]">
-                    {chatLogs.map((msg, index) => (
-                      <div 
-                        key={index}
-                        className={`p-3 rounded-xl border text-sm max-w-[90%] leading-relaxed flex flex-col ${
-                          msg.sender === 'user'
-                            ? 'bg-slate-900 border-slate-800 text-slate-300 self-end ml-auto'
-                            : 'bg-cyan-950/20 border-cyan-500/20 text-slate-100 self-start'
-                        }`}
-                      >
-                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">
-                          {msg.sender === 'user' ? 'User' : 'Assistant'}
-                        </span>
-                        <span>{msg.text}</span>
-                      </div>
-                    ))}
-                    
-                    {/* Live thinking steps indicator */}
-                    {typingStatus && (
-                      <div className="p-3 bg-slate-900/40 border border-slate-800/60 rounded-xl text-xs text-slate-400 flex items-center gap-2 self-start animate-pulse">
-                        <Activity className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
-                        <span>{typingStatus}</span>
-                      </div>
-                    )}
-                    <div ref={chatEndRef} />
-                  </div>
-
-                  {/* Quick prompts actions */}
-                  <div>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">
-                      👉 Click a quick prompt to test reasoning:
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {(Object.keys(PROMPTS) as Array<keyof typeof PROMPTS>).map((key) => (
-                        <button
-                          key={key}
-                          onClick={() => handlePromptClick(key)}
-                          disabled={isTyping}
-                          className="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-850 hover:border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-                        >
-                          {key === 'stack' ? '🛠️ Core Stack' : key === 'experience' ? '💼 Work History' : '🚀 Key Projects'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: RAG PIPELINE FLOW */}
-              {activeTab === 'rag' && (
-                <div className="flex-1 flex flex-col justify-center space-y-3">
-                  <div className="border border-slate-800/80 bg-slate-900/30 p-3 rounded-xl flex items-center gap-3">
-                    <div className="p-2 bg-sky-950/50 border border-sky-500/20 rounded-lg text-sky-400">
-                      <FileText className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-sky-300 font-bold font-mono">1. PDF Chunk Parser</p>
-                      <p className="text-[11px] text-slate-400">Extracted abhishek_resume.pdf into chunks</p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-center -my-1.5">
-                    <ArrowDown className="w-3.5 h-3.5 text-slate-700" />
-                  </div>
-
-                  <div className="border border-slate-800/80 bg-slate-900/30 p-3 rounded-xl flex items-center gap-3">
-                    <div className="p-2 bg-violet-950/50 border border-violet-500/20 rounded-lg text-violet-400">
-                      <Database className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-violet-300 font-bold font-mono">2. Vector Search (ChromaDB)</p>
-                      <p className="text-[11px] text-slate-400">Dense embedding search with cosine distance metric</p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-center -my-1.5">
-                    <ArrowDown className="w-3.5 h-3.5 text-slate-700" />
-                  </div>
-
-                  <div className="border border-slate-800/80 bg-slate-900/30 p-3 rounded-xl flex items-center gap-3">
-                    <div className="p-2 bg-emerald-950/50 border border-emerald-500/20 rounded-lg text-emerald-400">
-                      <Workflow className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-emerald-300 font-bold font-mono">3. Agent Loop (LangGraph)</p>
-                      <p className="text-[11px] text-slate-400">RAG Context + Tavily Search {"->"} Llama-3 Reasoning</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: TELEMETRY AND METRICS */}
-              {activeTab === 'metrics' && (
-                <div className="flex-1 flex flex-col justify-between font-mono text-xs text-slate-300">
-                  <div className="grid grid-cols-2 gap-3.5">
-                    <div className="border border-slate-800/60 p-2.5 rounded-xl bg-slate-900/20">
-                      <p className="text-[10px] text-slate-500 font-bold">LLM PROVIDER</p>
-                      <p className="text-white font-bold mt-0.5">Groq Cloud API</p>
-                    </div>
-                    <div className="border border-slate-800/60 p-2.5 rounded-xl bg-slate-900/20">
-                      <p className="text-[10px] text-slate-500 font-bold">ACTIVE LLM</p>
-                      <p className="text-cyan-400 font-bold mt-0.5">Llama-3-70b</p>
-                    </div>
-                    <div className="border border-slate-800/60 p-2.5 rounded-xl bg-slate-900/20">
-                      <p className="text-[10px] text-slate-500 font-bold">AVG LATENCY</p>
-                      <p className="text-emerald-400 font-bold mt-0.5">{metrics.latency}ms</p>
-                    </div>
-                    <div className="border border-slate-800/60 p-2.5 rounded-xl bg-slate-900/20">
-                      <p className="text-[10px] text-slate-500 font-bold">TOKENS / SEC</p>
-                      <p className="text-violet-400 font-bold mt-0.5">842 t/s</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3.5 mt-4">
-                    {/* CPU load bar */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-slate-400 text-[10px] uppercase font-bold">
-                        <span>CPU Utilisation</span>
-                        <span>{metrics.cpu}%</span>
-                      </div>
-                      <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
-                        <div 
-                          className="bg-gradient-to-r from-cyan-500 to-sky-500 h-full rounded-full transition-all duration-500" 
-                          style={{ width: `${metrics.cpu}%` }}
-                        ></div>
-                      </div>
-                    </div>
-
-                    {/* RAM load bar */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-slate-400 text-[10px] uppercase font-bold">
-                        <span>Memory (RAM)</span>
-                        <span>{metrics.ram}%</span>
-                      </div>
-                      <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
-                        <div 
-                          className="bg-gradient-to-r from-violet-500 to-fuchsia-500 h-full rounded-full transition-all duration-500" 
-                          style={{ width: `${metrics.ram}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Status bar */}
-              <div className="border-t border-slate-900 pt-3 mt-3 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                <div className="flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span>CONNECTED TO RAG SERVER</span>
-                </div>
-                <span>TEMP: 0.1</span>
-              </div>
-
-            </div>
+          {/* Quick Info Badges */}
+          <div className="flex flex-wrap gap-2 pt-4">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-900 text-xs font-semibold text-slate-600 dark:text-slate-400 border border-slate-200/50 dark:border-slate-800 shadow-sm">
+              <Cpu className="w-3.5 h-3.5 text-primary-500" />
+              AI Engineer
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-900 text-xs font-semibold text-slate-600 dark:text-slate-400 border border-slate-200/50 dark:border-slate-800 shadow-sm">
+              <Server className="w-3.5 h-3.5 text-cyan-500" />
+              Full Stack Developer
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-900 text-xs font-semibold text-slate-600 dark:text-slate-400 border border-slate-200/50 dark:border-slate-800 shadow-sm">
+              <Network className="w-3.5 h-3.5 text-purple-500" />
+              Problem Solver
+            </span>
           </div>
-        </div>
 
+          {/* Counters Grid */}
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-4 pt-6 border-t border-slate-250/20 dark:border-slate-800/40">
+            {stats.map((stat) => (
+              <div key={stat.label} className="space-y-1 text-center sm:text-left">
+                <p className="text-2xl sm:text-3xl font-extrabold text-slate-950 dark:text-white tracking-tight">
+                  <Counter value={stat.value} />
+                  <span className="text-primary-500 dark:text-cyan-400">{stat.suffix}</span>
+                </p>
+                <p className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 leading-tight">
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Right Column: Premium Brain Illustration */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="relative flex items-center justify-center h-[420px] sm:h-[480px] w-full max-w-[480px] lg:max-w-none mx-auto"
+        >
+          {/* Animated Central Core */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            {/* Pulsing Back Glow */}
+            <div className="absolute w-[240px] h-[240px] rounded-full bg-gradient-to-r from-primary-500 to-accent-500 blur-[80px] opacity-25 animate-pulse-glow" />
+
+            {/* Spinning Orbital Rings */}
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+              className="absolute w-[280px] h-[280px] rounded-full border border-dashed border-primary-500/20 dark:border-cyan-500/10"
+            />
+            <motion.div
+              animate={{ rotate: -360 }}
+              transition={{ duration: 35, repeat: Infinity, ease: 'linear' }}
+              className="absolute w-[360px] h-[360px] rounded-full border border-dashed border-accent-500/25 dark:border-purple-500/10"
+            />
+          </div>
+
+          {/* Central Interactive Network / Brain representation */}
+          <div className="relative w-[280px] h-[280px] bg-slate-900/5 dark:bg-slate-900/40 rounded-full border border-slate-200/50 dark:border-slate-800/80 backdrop-blur-md flex items-center justify-center animate-float shadow-xl">
+            {/* Pulsating brain image or SVG */}
+            <svg
+              className="w-40 h-40 text-primary-500 dark:text-cyan-400 animate-pulse"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {/* Left hemisphere */}
+              <path d="M12 22c-1.5 0-3-1-3.5-2.5C8 18 7 17 5.5 16.5 4 16 3 15 3 13.5c0-2.5 1.5-4 3-4C7 8.5 7.5 7 9 6.5 10 6 11 4.5 12 4.5" />
+              <path d="M12 4.5V22" />
+              <path d="M9 6.5C9 5 10 4 11 3.5" />
+              <path d="M6.5 9.5c0-1 1-2 2.5-3" />
+              <path d="M5.5 16.5C6 15 7 14 8.5 14" />
+
+              {/* Right hemisphere */}
+              <path d="M12 22c1.5 0 3-1 3.5-2.5.5-1.5 1.5-2.5 3-3C20 16 21 15 21 13.5c0-2.5-1.5-4-3-4 0-1-.5-2.5-2-3-1-.5-2-2-3-2" />
+              <path d="M15 6.5C15 5 14 4 13 3.5" />
+              <path d="M17.5 9.5c0-1-1-2-2.5-3" />
+              <path d="M18.5 16.5c-.5-1.5-1.5-2.5-3-2.5" />
+
+              {/* Synapses connections */}
+              <circle cx="12" cy="4.5" r="1" fill="currentColor" />
+              <circle cx="9" cy="6.5" r="1" fill="currentColor" />
+              <circle cx="15" cy="6.5" r="1" fill="currentColor" />
+              <circle cx="6.5" cy="9.5" r="1" fill="currentColor" />
+              <circle cx="17.5" cy="9.5" r="1" fill="currentColor" />
+              <circle cx="5.5" cy="16.5" r="1" fill="currentColor" />
+              <circle cx="18.5" cy="16.5" r="1" fill="currentColor" />
+              <circle cx="12" cy="22" r="1" fill="currentColor" />
+            </svg>
+
+            {/* Glowing inner core */}
+            <div className="absolute w-12 h-12 rounded-full bg-cyan-400/20 dark:bg-cyan-500/20 blur-md animate-ping" />
+          </div>
+
+          {/* Floating labels with connectors */}
+          {floatingLabels.map((node) => (
+            <motion.div
+              key={node.name}
+              className="absolute pointer-events-auto"
+              style={{ left: node.x, top: node.y }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                y: [0, -8, 0]
+              }}
+              transition={{
+                delay: node.delay,
+                duration: 5,
+                repeat: Infinity,
+                ease: 'easeInOut'
+              }}
+            >
+              <div className="relative group/node cursor-pointer">
+                {/* Node Glass Badge */}
+                <div className="px-3.5 py-2 rounded-full bg-white/70 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 hover:border-primary-400 dark:hover:border-cyan-400 shadow-md transition-all flex items-center gap-1.5 hover:scale-105 active:scale-95">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-primary-500 to-accent-500 animate-pulse" />
+                  <span className="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200">
+                    {node.name}
+                  </span>
+                </div>
+
+                {/* Connector dot */}
+                <div className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary-400 dark:bg-cyan-500 opacity-0 group-hover/node:opacity-100 transition-opacity" />
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
     </section>
   )
