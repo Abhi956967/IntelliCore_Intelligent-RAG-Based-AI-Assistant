@@ -16,7 +16,7 @@ cp .env.example .env
 # - TAVILY_API_KEY
 
 # 4. Install dependencies
-make install
+# make install
 
 # 5. Build frontend
 make build
@@ -105,6 +105,7 @@ make docker-compose
 ### 🏗️ Deploy to AWS
 
 See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for:
+
 - ECR setup
 - ECS Fargate configuration
 - CloudFormation templates
@@ -347,16 +348,16 @@ python -c "from app.database.operations import init_db; init_db()"
 
 ## 🤔 FAQs
 
-**Q: How do I add authentication?**  
+**Q: How do I add authentication?**
 A: Add JWT middleware in `app/main.py` or use FastAPI's built-in security.
 
-**Q: Can I use PostgreSQL?**  
+**Q: Can I use PostgreSQL?**
 A: Yes! Replace SQLAlchemy setup to use PostgreSQL connection.
 
-**Q: How do I scale?**  
+**Q: How do I scale?**
 A: Use load balancers, caching (Redis), and multi-container orchestration (Kubernetes).
 
-**Q: Is it production-ready?**  
+**Q: Is it production-ready?**
 A: Yes! It's containerized and has deployment configs for AWS/Render.
 
 ---
@@ -372,9 +373,3 @@ A: Yes! It's containerized and has deployment configs for AWS/Render.
 ---
 
 <div align="center">
-
-**Happy coding! 🚀**
-
-[Deployment Guide](DEPLOYMENT_GUIDE.md) · [Documentation](README.md) · [GitHub](https://github.com/Abhi956967/IntelliCore_Intelligent-RAG-Based-AI-Assistant)
-
-</div>
