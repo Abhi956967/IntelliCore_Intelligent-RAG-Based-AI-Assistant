@@ -16,7 +16,7 @@ help:
 	@echo ""
 
 install:
-	pip install -r requirements.txt
+	pip install -r backend/requirements.txt
 	cd frontend && npm install && cd ..
 
 dev:
@@ -34,11 +34,11 @@ build:
 	@echo "✓ Frontend built successfully in frontend/dist/"
 
 test:
-	pytest tests/ -v
+	pytest backend/tests/ -v
 
 lint:
 	cd frontend && npm run lint && cd ..
-	pylint app/ --disable=all --enable=E,F || true
+	pylint backend/app/ --disable=all --enable=E,F || true
 
 clean:
 	rm -rf frontend/dist

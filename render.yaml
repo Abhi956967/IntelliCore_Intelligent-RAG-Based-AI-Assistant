@@ -5,7 +5,7 @@ services:
     plan: starter
     region: oregon
     healthCheckPath: /health
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && cd frontend && npm ci && npm run build
+    buildCommand: pip install --upgrade pip && pip install -r backend/requirements.txt && cd frontend && npm ci && npm run build
     startCommand: python run.py
     autoDeployTrigger: commit
     disk:
@@ -20,11 +20,11 @@ services:
       - key: APP_STORAGE_DIR
         value: /var/data
       - key: LLM_PROVIDER
-        value: groq
+        value: google
       - key: GEMINI_MODEL
-        value: gemini-2.0-flash
+        value: gemini-3.6-flash
       - key: GROQ_MODEL
-        value: llama-3.1-8b-instant
+        value: qwen/qwen3.6-27b
       - key: GOOGLE_API_KEY
         sync: false
       - key: GROQ_API_KEY

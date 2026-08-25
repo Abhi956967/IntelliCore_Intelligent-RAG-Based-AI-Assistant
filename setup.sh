@@ -64,7 +64,7 @@ fi
 # Install Python dependencies
 echo "Installing Python dependencies..."
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 echo -e "${GREEN}✓ Python dependencies installed${NC}"
 
 # Install frontend dependencies
@@ -79,7 +79,7 @@ echo -e "${GREEN}✓ Frontend built successfully${NC}"
 # Create directories
 echo ""
 echo "Creating required directories..."
-mkdir -p data uploads chroma_db
+mkdir -p backend/data backend/uploads backend/chroma_db
 echo -e "${GREEN}✓ Directories created${NC}"
 
 echo ""
