@@ -217,10 +217,24 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# BappyGPT runtime data
+# Node / React
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend_dist/
+*.tsbuildinfo
+
+# Runtime data
 uploads/*
 !uploads/.gitkeep
 data/*.db
 data/*.sqlite*
 chroma_db/*
 !chroma_db/.gitkeep
+
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/data/*.db
+backend/data/*.sqlite*
+backend/chroma_db/*
+!backend/chroma_db/.gitkeep

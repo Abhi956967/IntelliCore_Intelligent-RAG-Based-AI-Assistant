@@ -24,25 +24,33 @@ DATA_DIR = get_data_dir()
 
 
 GEMINI_MODELS = {
+    "gemini-3.6-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-pro-preview",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
     "gemini-2.0-flash",
     "gemini-2.0-flash-lite",
     "gemini-2.0-pro",
-    "gemini-2.0-pro-exp-02-05",
     "gemini-1.5-flash",
     "gemini-1.5-pro",
 }
 
 GROQ_MODELS = {
+    "qwen/qwen3.6-27b",
+    "openai/gpt-oss-20b",
+    "openai/gpt-oss-120b",
+    "groq/compound-mini",
+    "groq/compound",
+    "llama-3.3-70b-versatile",
     "llama-3.1-8b-instant",
     "llama-3.1-8b-instruct",
 }
 
 ALLOWED_MODELS = GEMINI_MODELS | GROQ_MODELS
 
-FALLBACK_GEMINI_MODEL = "gemini-2.0-flash"
-FALLBACK_GROQ_MODEL = "llama-3.1-8b-instant"
+FALLBACK_GEMINI_MODEL = "gemini-3.6-flash"
+FALLBACK_GROQ_MODEL = "qwen/qwen3.6-27b"
 DEFAULT_PROVIDER = os.getenv("LLM_PROVIDER", "google").strip().lower()
 DEFAULT_GEMINI_MODEL = os.getenv("GEMINI_MODEL", FALLBACK_GEMINI_MODEL).strip()
 DEFAULT_GROQ_MODEL = os.getenv("GROQ_MODEL", FALLBACK_GROQ_MODEL).strip()
@@ -121,6 +129,7 @@ def build_agent(model_name: str):
     if provider == "groq":
         primary_llm = ChatGroq(
             model=selected_model,
+            api_key=os.getenv("GROQ_API_KEY"),
             temperature=0.7,
             max_retries=3,
         )
@@ -143,6 +152,7 @@ def build_agent(model_name: str):
         fallback_model = normalize_model_name(DEFAULT_GROQ_MODEL)
         fallback_llm = ChatGroq(
             model=fallback_model,
+            api_key=os.getenv("GROQ_API_KEY"),
             temperature=0.7,
             max_retries=3,
         )

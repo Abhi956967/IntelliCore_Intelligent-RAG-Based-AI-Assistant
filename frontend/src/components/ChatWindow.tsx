@@ -138,7 +138,7 @@ export default function ChatWindow({ user }: ChatWindowProps) {
   const [expandedSources, setExpandedSources] = useState<Record<number, boolean>>({})
 
   // Extra features states
-  const [selectedModel, setSelectedModel] = useState<string>(() => localStorage.getItem('intellicore.selectedModel') || 'gemini-2.0-flash')
+  const [selectedModel, setSelectedModel] = useState<string>(() => localStorage.getItem('intellicore.selectedModel') || 'gemini-3.6-flash')
   const [liveStatus, setLiveStatus] = useState<string>('')
   const [conversationFiles, setConversationFiles] = useState<any[]>([])
   const [showDocManager, setShowDocManager] = useState<boolean>(false)
@@ -408,7 +408,7 @@ export default function ChatWindow({ user }: ChatWindowProps) {
         return [...prev, { role: 'assistant', content: '' }]
       })
 
-      const response = await fetch(getApiUrl('/chat/stream'), {
+      let response = await fetch(getApiUrl('/chat/stream'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -419,9 +419,28 @@ export default function ChatWindow({ user }: ChatWindowProps) {
         signal: controller.signal
       })
 
+      if (response.status === 404) {
+        response = await fetch(getApiUrl('/api/chat/stream'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: userMessage,
+            conversation_id: conversationId,
+            model: selectedModel,
+          }),
+          signal: controller.signal
+        })
+      }
+
       if (!response.ok) {
         const errorText = await response.text()
-        throw new Error(errorText || `Request failed with status ${response.status}`)
+        let cleanErr = errorText
+        try {
+          const parsed = JSON.parse(errorText)
+          if (parsed.detail) cleanErr = typeof parsed.detail === 'string' ? parsed.detail : JSON.stringify(parsed.detail)
+          else if (parsed.error) cleanErr = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error)
+        } catch (_) {}
+        throw new Error(cleanErr || `Request failed with status ${response.status}`)
       }
 
       if (!response.body) throw new Error('No response body')
@@ -864,12 +883,11 @@ export default function ChatWindow({ user }: ChatWindowProps) {
                     : 'bg-slate-550/5 border-slate-200 text-slate-650 hover:bg-slate-100 hover:text-slate-850 shadow-sm'
                 }`}
               >
-                <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fast)</option>
-                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
-                <option value="gemini-2.0-pro">Gemini 2.0 Pro (High)</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                <option value="llama-3.1-8b-instant">Llama 3.1 8B (Groq)</option>
+                <option value="gemini-3.6-flash">Gemini 3.6 Flash (Fast)</option>
+                <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite</option>
+                <option value="qwen/qwen3.6-27b">Qwen 3.6 27B (Groq)</option>
+                <option value="openai/gpt-oss-20b">GPT OSS 20B (Groq)</option>
+                <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (High)</option>
               </select>
             </div>
           </div>
@@ -962,25 +980,25 @@ export default function ChatWindow({ user }: ChatWindowProps) {
             )}
 
             {messages.map((msg, idx) => (
-              <div key={`${msg.message_id || idx}-${idx}`} className={`flex gap-3.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
+              <div key={`${msg.message_id || idx}-${idx}`} className={`flex gap-3 items-end ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
                 {msg.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-600 to-accent-600 text-white flex items-center justify-center flex-shrink-0 shadow shadow-primary-500/25">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-600 to-accent-600 text-white flex items-center justify-center flex-shrink-0 shadow shadow-primary-500/25 mb-1">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
-                <div className={`group flex flex-col max-w-[min(760px,88%)] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div className="flex gap-2 items-center w-full">
-                    <div className={`px-4.5 py-3.5 rounded-2xl break-words shadow-sm ${
+                <div className={`group flex flex-col max-w-[min(760px,85%)] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  <div className={`flex gap-2 items-center ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
+                    <div className={`px-4 py-2.5 sm:px-5 sm:py-3 rounded-2xl break-words shadow-sm ${
                       msg.role === 'user'
-                        ? 'bg-primary-600 text-white rounded-br-md'
+                        ? 'bg-primary-600 text-white rounded-br-sm'
                         : darkMode
-                          ? 'bg-slate-900 border border-slate-855 text-slate-100 rounded-bl-md'
-                          : 'bg-white border border-slate-200 text-slate-900 rounded-bl-md'
+                          ? 'bg-slate-900 border border-slate-800 text-slate-100 rounded-bl-sm'
+                          : 'bg-white border border-slate-200 text-slate-900 rounded-bl-sm'
                     }`}>
                       {msg.content ? (
-                        <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                        <p className="text-sm sm:text-[15px] whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                       ) : (
-                        <div className="flex flex-col gap-1 text-slate-550 py-1 min-w-[140px]">
+                        <div className="flex flex-col gap-1 text-slate-500 py-1 min-w-[140px]">
                           <div className="flex items-center gap-2">
                             <Loader className="w-4 h-4 animate-spin text-primary-600 dark:text-cyan-400" />
                             <span className="text-sm font-medium">{liveStatus || 'Thinking...'}</span>
@@ -1098,7 +1116,7 @@ export default function ChatWindow({ user }: ChatWindowProps) {
 
                 </div>
                 {msg.role === 'user' && (
-                  <div className="w-8 h-8 rounded-xl bg-slate-900/10 dark:bg-slate-800 text-primary-700 dark:text-cyan-400 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <div className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-cyan-400 flex items-center justify-center flex-shrink-0 shadow-sm mb-1">
                     <User className="w-4 h-4" />
                   </div>
                 )}

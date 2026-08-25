@@ -21,7 +21,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../frontend_dist',
+    outDir: 'dist',
     emptyOutDir: true,
     sourcemap: false,
     minify: 'terser'

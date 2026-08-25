@@ -1,8 +1,23 @@
 from dotenv import load_dotenv
 import os
+import sys
+from pathlib import Path
 import certifi
 
-load_dotenv()
+# Ensure backend root is in sys.path
+backend_root = Path(__file__).resolve().parent.parent
+if str(backend_root) not in sys.path:
+    sys.path.insert(0, str(backend_root))
+
+# Load .env from backend/.env or root .env
+backend_env = backend_root / ".env"
+root_env = backend_root.parent / ".env"
+if backend_env.exists():
+    load_dotenv(dotenv_path=backend_env)
+elif root_env.exists():
+    load_dotenv(dotenv_path=root_env)
+else:
+    load_dotenv()
 
 os.environ["SSL_CERT_FILE"] = certifi.where()
 os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
@@ -10,7 +25,6 @@ os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
 import json
 import re
 import uuid
-from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, Request, UploadFile, File, Form
@@ -60,7 +74,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-templates = Jinja2Templates(directory="app/templates")
+templates_dir = Path(__file__).resolve().parent / "templates"
+templates = Jinja2Templates(directory=str(templates_dir))
 
 from app.storage import get_uploads_dir
 
@@ -71,7 +86,12 @@ init_db()
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(15 * 1024 * 1024)))
 
 def get_frontend_dist_dir() -> Path | None:
-    candidates = [Path("frontend_dist"), Path("frontend/dist")]
+    candidates = [
+        backend_root.parent / "frontend" / "dist",
+        backend_root.parent / "frontend_dist",
+        Path("frontend/dist"),
+        Path("frontend_dist")
+    ]
     for candidate in candidates:
         if candidate.exists() and (candidate / "index.html").exists():
             return candidate
@@ -522,6 +542,7 @@ def recent_context_message(thread_id: str, limit: int = 10) -> SystemMessage | N
 
 
 @app.post("/chat/stream")
+@app.post("/api/chat/stream")
 async def chat_stream(request: Request):
     try:
         data = await request.json()

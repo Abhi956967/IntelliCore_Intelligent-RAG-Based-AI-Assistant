@@ -7,15 +7,15 @@ current_sources = contextvars.ContextVar("current_sources", default=[])
 
 
 def resolve_storage_dir() -> Path:
-    configured = os.getenv("APP_STORAGE_DIR", ".").strip()
+    configured = os.getenv("APP_STORAGE_DIR", "").strip()
 
-    if not configured:
-        configured = "."
-
-    storage_dir = Path(configured)
-
-    if not storage_dir.is_absolute():
-        storage_dir = Path.cwd() / storage_dir
+    if configured:
+        storage_dir = Path(configured)
+        if not storage_dir.is_absolute():
+            storage_dir = Path.cwd() / storage_dir
+    else:
+        # Default to the backend root directory
+        storage_dir = Path(__file__).resolve().parent.parent
 
     try:
         storage_dir.mkdir(parents=True, exist_ok=True)
